@@ -1,4 +1,4 @@
-# DatSciS24_HW_Arti_repo-temp
+# DatSciS24_HW_repo
 
 Week 1 - HW 1
 
