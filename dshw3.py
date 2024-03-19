@@ -4,10 +4,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 
-url = "https://data.cityofnewyork.us/api/views/6fi9-q3ta/rows.csv?accessType=DOWNLOAD"
-df = pd.read_csv(url)
-print(df.columns)
+# Data Diagnostics
+#    print(df.isnull().sum())
+#    print(df.describe())
+# fill missing
 
+df.sort_values(by='hour_beginning', inplace=True)
+df[['weather_summary', 'temperature', 'precipitation']] = df[
+    ['weather_summary', 'temperature', 'precipitation']].fillna(method='ffill')
+
+df['hour_beginning'] = pd.to_datetime(df['hour_beginning'])
+df['weekday'] = df['hour_beginning'].dt.dayofweek
+df['hour'] = df['hour_beginning'].dt.hour
+
+# 1
 df['hour_beginning'] = pd.to_datetime(df['hour_beginning'])
 df['weekday'] = df['hour_beginning'].dt.dayofweek
 weekdays_df = df[df['weekday'] < 5]
@@ -42,23 +52,30 @@ plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
 plt.show()
 
-def categorize_time_of_day(hour):
-    if 5 <= hour < 12:
-        return 'Morning'
-    elif 12 <= hour < 17:
-        return 'Afternoon'
-    elif 17 <= hour < 21:
-        return 'Evening'
-    else:
-        return 'Night'
+# 3
+time_map = {
+        (0, 4): 'Night',
+        (5, 11): 'Morning',
+        (12, 16): 'Afternoon',
+        (17, 19): 'Evening',
+        (20, 23): 'Night'
+    }
 
-df['time_of_day'] = df['hour_beginning'].dt.hour.apply(categorize_time_of_day)
-time_of_day_counts = df.groupby('time_of_day')['Pedestrians'].sum()
+def time_daymap(hour):
+    for (start, end), value in time_map.items():
+        if start <= hour <= end:
+            return value
+    return "Undefined"
 
+
+df['time_of_day'] = df['hour'].apply(time_daymap)
+order = ['Morning', 'Afternoon', 'Evening', 'Night']
+
+# Count by time of day
 plt.figure(figsize=(10, 6))
-time_of_day_counts.reindex(['Morning', 'Afternoon', 'Evening', 'Night']).plot(kind='bar')
-plt.title('Pedestrian Activity Patterns Throughout the Day')
+sns.countplot(data=df, x='time_of_day', order=['Morning', 'Afternoon', 'Evening', 'Night'], palette='coolwarm')
+plt.title('Pedestrian Counts by Time of Day')
 plt.xlabel('Time of Day')
-plt.ylabel('Total Pedestrian Counts')
+plt.ylabel('Count')
 plt.tight_layout()
 plt.show()
