@@ -8,24 +8,28 @@ url = "https://data.cityofnewyork.us/api/views/6fi9-q3ta/rows.csv?accessType=DOW
 df = pd.read_csv(url)
 print(df.columns)
 
-# 'hour_beginning' ->  datetime
 df['hour_beginning'] = pd.to_datetime(df['hour_beginning'])
 df['weekday'] = df['hour_beginning'].dt.dayofweek
 weekdays_df = df[df['weekday'] < 5]
+by_day = weekdays_df.groupby('weekday')['Pedestrians'].sum()
 
-# by day of the week
-pedestrian_counts_by_day = weekdays_df.groupby('weekday')['Pedestrians'].sum()
-days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-counts = [pedestrian_counts_by_day[i] for i in range(5)]
+days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+counts = [by_day[i] for i in range(5)]
+
+plot_data = pd.DataFrame({
+    'Week-day': days,
+    'Pedestrian Count': counts
+})
+
+sns.set_style("whitegrid")
 plt.figure(figsize=(10, 6))
-plt.plot(days_of_week, counts, marker='o')
-plt.title('Pedestrian Counts by Weekday')
+sns.lineplot(data=plot_data, x='Week-day', y='Pedestrian Count', marker='o')
+plt.title('Pedestrian Count by Weekday')
 plt.xlabel('Day of the Week')
-plt.ylabel('Total Pedestrian Counts')
-plt.grid(True)
+plt.ylabel('Pedestrian Count')
 plt.show()
 
-# pedestrian counts on Bridge 2019, by weather
+# 2
 bridge_2019 = df[(df['hour_beginning'].dt.year == 2019) & (df['location'] == 'Brooklyn Bridge')]
 weather_counts = bridge_2019.groupby('weather_summary')['Pedestrians'].sum().sort_values()
 
