@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from datetime import datetime
 
+url = "https://data.cityofnewyork.us/api/views/6fi9-q3ta/rows.csv?accessType=DOWNLOAD"
+df = pd.read_csv(url)
+
 # Data Diagnostics
-#    print(df.isnull().sum())
-#    print(df.describe())
+# print(df.isnull().sum())
+# print(df.describe())
 # fill missing
 
 df.sort_values(by='hour_beginning', inplace=True)
 df[['weather_summary', 'temperature', 'precipitation']] = df[
     ['weather_summary', 'temperature', 'precipitation']].fillna(method='ffill')
-
 df['hour_beginning'] = pd.to_datetime(df['hour_beginning'])
 df['weekday'] = df['hour_beginning'].dt.dayofweek
 df['hour'] = df['hour_beginning'].dt.hour
@@ -22,7 +25,6 @@ df['hour_beginning'] = pd.to_datetime(df['hour_beginning'])
 df['weekday'] = df['hour_beginning'].dt.dayofweek
 weekdays_df = df[df['weekday'] < 5]
 by_day = weekdays_df.groupby('weekday')['Pedestrians'].sum()
-
 days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 counts = [by_day[i] for i in range(5)]
 
@@ -40,16 +42,15 @@ plt.ylabel('Pedestrian Count')
 plt.show()
 
 # 2
-bridge_2019 = df[(df['hour_beginning'].dt.year == 2019) & (df['location'] == 'Brooklyn Bridge')]
-weather_counts = bridge_2019.groupby('weather_summary')['Pedestrians'].sum().sort_values()
+df_2019weather = df[(df['hour_beginning'].dt.year == 2019) & (df['location'] == 'Brooklyn Bridge')]
+cor_dat = df_2019weather[['Pedestrians', 'temperature', 'precipitation']]
 
-plt.figure(figsize=(12, 8))
-weather_counts.plot(kind='bar')
-plt.title('Pedestrian Counts by Weather Summary for Brooklyn Bridge in 2019')
-plt.xlabel('Weather Summary')
-plt.ylabel('Total Pedestrian Counts')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
+correlation_matrix = cor_dat.corr()
+
+# heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=.5)
+plt.title('Correlation Matrix - Temperature vs Precipitation Count')
 plt.show()
 
 # 3
@@ -59,7 +60,7 @@ time_map = {
         (12, 16): 'Afternoon',
         (17, 19): 'Evening',
         (20, 23): 'Night'
-    }
+}
 
 def time_daymap(hour):
     for (start, end), value in time_map.items():
@@ -67,13 +68,17 @@ def time_daymap(hour):
             return value
     return "Undefined"
 
-
 df['time_of_day'] = df['hour'].apply(time_daymap)
 order = ['Morning', 'Afternoon', 'Evening', 'Night']
 
-# Count by time of day
+# by time of day
 plt.figure(figsize=(10, 6))
-sns.countplot(data=df, x='time_of_day', order=['Morning', 'Afternoon', 'Evening', 'Night'], palette='coolwarm')
+sns.countplot(data=df,
+              x='time_of_day',
+              hue='time_of_day',
+              order=['Morning', 'Afternoon', 'Evening', 'Night'],
+              palette='coolwarm',
+              legend=False)
 plt.title('Pedestrian Counts by Time of Day')
 plt.xlabel('Time of Day')
 plt.ylabel('Count')
